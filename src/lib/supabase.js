@@ -1,11 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+// Prefer env vars; fall back to the project's public values so the app also
+// runs in environments that don't load .env (e.g. Bolt/StackBlitz imports).
+// The anon (publishable) key is browser-safe by design — RLS protects all data.
+const FALLBACK_URL = 'https://xwdlcbmbirlaacegvpcy.supabase.co'
+const FALLBACK_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh3ZGxjYm1iaXJsYWFjZWd2cGN5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM0OTY2NTQsImV4cCI6MjA4OTA3MjY1NH0.AS0BxXrrlpuGdCOJZeo4ByLK6xAe2vbDaW-M11-AjqE'
 
-if (!url || !anonKey) {
-  console.warn('Missing VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY in .env')
-}
+const url = import.meta.env.VITE_SUPABASE_URL || FALLBACK_URL
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || FALLBACK_ANON_KEY
 
 export const supabase = createClient(url, anonKey, {
   auth: { persistSession: true, autoRefreshToken: true }
