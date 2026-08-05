@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase.js'
+import LivePreview from './LivePreview.jsx'
 
 const FIELDS = [
   { key: 'display_name', label: 'Display name', type: 'text' },
@@ -22,9 +23,12 @@ export default function ContentEditor({ property }) {
   const [form, setForm] = useState(null)
   const [published, setPublished] = useState(false)
   const [status, setStatus] = useState('')
+  const [manual, setManual] = useState([])
+  const [recs, setRecs] = useState([])
 
   useEffect(() => {
     let alive = true
+    // content
     supabase.from('display_content').select('*').eq('property_id', property.id).maybeSingle()
       .then(({ data }) => {
         if (!alive) return
@@ -33,6 +37,11 @@ export default function ContentEditor({ property }) {
         setForm(base)
         setPublished(data?.is_published ?? false)
       })
+    // manual + recommendations (read-only here, shown in the phone preview)
+    supabase.from('display_house_manual_items').select('*').eq('property_id', property.id)
+      .order('sort_order', { ascending: true }).then(({ data }) => { if (alive) setManual(data || []) })
+    supabase.from('display_recommendations').select('*').eq('property_id', property.id)
+      .order('sort_order', { ascending: true }).then(({ data }) => { if (alive) setRecs(data || []) })
     return () => { alive = false }
   }, [property.id])
 
@@ -52,42 +61,53 @@ export default function ContentEditor({ property }) {
   if (!form) return <div className="text-neutral-500">Loading content…</div>
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
-          Published (visible on TV & guide)
-        </label>
-        <div className="flex items-center gap-3">
-          {status && <span className="text-sm text-neutral-400">{status}</span>}
-          <button onClick={() => save()} className="px-4 py-2 rounded-lg bg-[#C8A97E] text-black font-medium text-sm">Save</button>
-        </div>
-      </div>
-
-      <div className="grid gap-3">
-        {FIELDS.map((f) => (
-          <div key={f.key}>
-            <label className="block text-xs text-neutral-500 mb-1">{f.label}</label>
-            {f.type === 'textarea' ? (
-              <textarea rows={3} value={form[f.key]} placeholder={f.placeholder || ''}
-                onChange={(e) => set(f.key, e.target.value)}
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm outline-none focus:border-neutral-600" />
-            ) : (
-              <input type="text" value={form[f.key]} placeholder={f.placeholder || ''}
-                onChange={(e) => set(f.key, e.target.value)}
-                className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm outline-none focus:border-neutral-600" />
-            )}
+    <div className="grid lg:grid-cols-2 gap-6 items-start">
+      {/* Left: editable fields */}
+      <div className="space-y-4 order-2 lg:order-1">
+        <div className="flex items-center justify-between">
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={published} onChange={(e) => setPublished(e.target.checked)} />
+            Published (visible on TV &amp; guide)
+          </label>
+          <div className="flex items-center gap-3">
+            {status && <span className="text-sm text-neutral-400">{status}</span>}
+            <button onClick={() => save()} className="px-4 py-2 rounded-lg bg-[#C8A97E] text-black font-medium text-sm">Save</button>
           </div>
-        ))}
+        </div>
+
+        <div className="grid gap-3">
+          {FIELDS.map((f) => (
+            <div key={f.key}>
+              <label className="block text-xs text-neutral-500 mb-1">{f.label}</label>
+              {f.type === 'textarea' ? (
+                <textarea rows={3} value={form[f.key]} placeholder={f.placeholder || ''}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm outline-none focus:border-neutral-600" />
+              ) : (
+                <input type="text" value={form[f.key]} placeholder={f.placeholder || ''}
+                  onChange={(e) => set(f.key, e.target.value)}
+                  className="w-full rounded-lg bg-neutral-900 border border-neutral-800 px-3 py-2 text-sm outline-none focus:border-neutral-600" />
+              )}
+            </div>
+          ))}
+        </div>
+
+        <p className="text-xs text-neutral-500">
+          Fallbacks apply for blank fields (Wi-Fi / photo / access code from the Guesty record).
+          House manual &amp; recommendations are edited in their own tabs and shown in the phone preview.
+        </p>
       </div>
 
-      <div className="flex flex-wrap gap-3 pt-2">
-        <a href={`/guide?property=${property.id}`} target="_blank" rel="noreferrer"
-          className="text-sm text-[#C8A97E] hover:underline">Preview guide ↗</a>
-        <span className="text-neutral-700">·</span>
-        <span className="text-sm text-neutral-500">
-          Fallbacks apply for blank fields (Wi-Fi / photo / access code from the Guesty record).
-        </span>
+      {/* Right: live preview */}
+      <div className="order-1 lg:order-2 lg:sticky lg:top-24 self-start">
+        <LivePreview
+          content={form}
+          propertyName={property.public_name || property.name}
+          city={property.city}
+          propertyId={property.id}
+          manual={manual}
+          recs={recs}
+        />
       </div>
     </div>
   )

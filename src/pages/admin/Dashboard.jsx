@@ -122,7 +122,7 @@ function Shell({ email, children }) {
           <button onClick={() => supabase.auth.signOut()} className="px-3 py-1.5 rounded-lg border border-neutral-800 hover:border-neutral-600">Sign out</button>
         </div>
       </header>
-      <main className="max-w-3xl mx-auto p-5">{children}</main>
+      <main className="max-w-6xl mx-auto p-5">{children}</main>
     </div>
   )
 }
